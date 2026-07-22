@@ -18,7 +18,6 @@ export function AppProvider({ children }) {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ─── Баазаас бүх өгөгдөл ачаалах ────────────────────────
   useEffect(() => {
     if (!user) return;
     const loadData = async () => {
@@ -144,35 +143,97 @@ export function AppProvider({ children }) {
     }
   };
 
+  const addUser = async (userData) => {
+    try {
+      const res = await fetch(`${API_URL}/appdata/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotify(`⚠️ ${data.error || "Хэрэглэгч нэмэхэд алдаа гарлаа"}`);
+        return null;
+      }
+      setUsersState(prev => [...prev, data]);
+      showNotify("🎉 Шинэ хэрэглэгч амжилттай нэмэгдлээ.");
+      return data;
+    } catch (e) {
+      console.error("Хэрэглэгч нэмэхэд алдаа:", e);
+      showNotify("⚠️ Хэрэглэгч нэмэхэд алдаа гарлаа");
+      return null;
+    }
+  };
+
+  const resetPassword = async (userId, password) => {
+    try {
+      const res = await fetch(`${API_URL}/appdata/users/${userId}/password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showNotify(`⚠️ ${data.error || "Нууц үг шинэчлэхэд алдаа гарлаа"}`);
+        return false;
+      }
+      showNotify("Нууц үг шинэчлэгдлээ ✓");
+      return true;
+    } catch (e) {
+      console.error("Нууц үг шинэчлэхэд алдаа:", e);
+      showNotify("⚠️ Нууц үг шинэчлэхэд алдаа гарлаа");
+      return false;
+    }
+  };
+
   // ─── TIME LOGS ────────────────────────────────────────────
+
+  // ✅ ШИНЭ: Нэг л POST хийх цэвэр функц
+  const addTimeLog = async ({ userId, projectId, desc, hours, date }) => {
+    try {
+      const res = await fetch(`${API_URL}/appdata/timelogs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          projectId,
+          taskDescription: desc,
+          hoursSpent:      Number(hours),
+          logDate:         date,
+        }),
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setTimeLogsState(prev => [saved, ...prev]);
+        showNotify("🎉 Цаг амжилттай бүртгэгдлээ.");
+      } else {
+        showNotify("❌ Бүртгэхэд алдаа гарлаа.");
+      }
+    } catch (e) {
+      console.error("Цаг хадгалахад алдаа:", e);
+      showNotify("❌ Сүлжээний алдаа.");
+    }
+  };
+
+  // TimeLogsPage-д ашиглагдах (admin нэмэх)
   const setTimeLogs = async (newLogsOrFn) => {
     const updatedLogs = typeof newLogsOrFn === "function"
       ? newLogsOrFn(timeLogs)
       : newLogsOrFn;
+
+    // Шинэ log олоод нэмэх (admin TimeLogsPage-с нэмэх үед)
     const addedLog = updatedLogs.find(l => !timeLogs.some(old => old.id === l.id));
     if (addedLog) {
-      try {
-        const res = await fetch(`${API_URL}/appdata/timelogs`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId:          addedLog.userId || user.id,
-            projectId:       addedLog.projectId || projects.find(p => p.name === addedLog.project)?.id,
-            taskDescription: addedLog.desc,
-            hoursSpent:      Number(addedLog.hours),
-            logDate:         addedLog.date,
-          }),
-        });
-        if (res.ok) {
-          const saved = await res.json();
-          setTimeLogsState(prev => [saved, ...prev.filter(l => l.id !== addedLog.id)]);
-          showNotify("Цагийн бүртгэл амжилттай хадгалагдлаа.");
-          return;
-        }
-      } catch (e) {
-        console.error("Цаг хадгалахад алдаа:", e);
-      }
+      await addTimeLog({
+        userId:    addedLog.userId,
+        projectId: addedLog.projectId || projects.find(p => p.name === addedLog.project)?.id,
+        desc:      addedLog.desc,
+        hours:     addedLog.hours,
+        date:      addedLog.date,
+      });
+      return;
     }
+
     setTimeLogsState(updatedLogs);
   };
 
@@ -190,9 +251,9 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      users,    setUsers: setUsersState, deleteUser, toggleProjectUser, assignJobTitle,
+      users,    setUsers: setUsersState, deleteUser, addUser, resetPassword, toggleProjectUser, assignJobTitle,
       jobTitles,
-      timeLogs, setTimeLogs, deleteTimeLog,
+      timeLogs, setTimeLogs, addTimeLog, deleteTimeLog,
       projects, setProjects: setProjectsState, addProject, deleteProject,
       tasks,    setTasks: setTasksState,
       toast,    setToast,

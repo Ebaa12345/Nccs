@@ -1,31 +1,8 @@
-
-import { useState } from "react";
+// 📁 src/pages/LandingPage.jsx
 import { useAuth } from "../context/AuthContext";
-import Hero3D from "../components/Hero3D";
 
 export default function LandingPage() {
-  const { login } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-    if (!username.trim() || !password) {
-      setError("Нэвтрэх нэр, нууц үгээ бөглөнө үү.");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await login(username.trim(), password);
-    } catch (err) {
-      setError(err.message || "Нэвтрэхэд алдаа гарлаа.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const { login, isLoading } = useAuth();
 
   const stats = [
     { value: "100+", label: "Инженер" },
@@ -87,8 +64,8 @@ export default function LandingPage() {
           <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
         </svg>
       ),
-      title: "Аюулгүй нэвтрэлт",
-      desc: "Нэвтрэх нэр, нууц үгээрээ ажилтан бүр хувийн бүртгэлдээ аюулгүй нэвтэрнэ.",
+      title: "Microsoft 365 нэвтрэлт",
+      desc: "Байгууллагын Microsoft бүртгэлээр нэг товшилтоор аюулгүй нэвтэрнэ.",
     },
   ];
 
@@ -126,22 +103,29 @@ export default function LandingPage() {
                 onMouseLeave={e => e.target.style.color = "#94a3b8"}
               >{label}</a>
             ))}
-            <a
-              href="#login"
+            <button
+              onClick={login}
+              disabled={isLoading}
               style={{
                 marginLeft: 8,
                 display: "flex", alignItems: "center", gap: 8,
                 padding: "9px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600,
                 background: "linear-gradient(135deg, #6366f1, #3b82f6)",
-                color: "#fff", border: "none", cursor: "pointer", textDecoration: "none",
+                color: "#fff", border: "none", cursor: "pointer",
                 boxShadow: "0 4px 20px rgba(99,102,241,0.35)",
                 transition: "all 0.2s",
               }}
               onMouseEnter={e => e.currentTarget.style.transform = "scale(1.04)"}
               onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
             >
-              Нэвтрэх
-            </a>
+              <svg width="16" height="16" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+              </svg>
+              {isLoading ? "Нэвтэрч байна..." : "Нэвтрэх"}
+            </button>
           </div>
         </div>
       </nav>
@@ -163,85 +147,77 @@ export default function LandingPage() {
           pointerEvents: "none",
         }}/>
 
-        <div style={{
-          maxWidth: 1200, margin: "0 auto", position: "relative",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          gap: 40, flexWrap: "wrap",
-        }}>
-          {/* Left: copy */}
-          <div style={{ flex: "1 1 460px", minWidth: 300, textAlign: "left" }}>
-            {/* Badge */}
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              padding: "6px 16px", borderRadius: 100,
-              background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)",
-              fontSize: 12, color: "#a5b4fc", fontWeight: 600, letterSpacing: "0.05em",
-              marginBottom: 32, textTransform: "uppercase",
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366f1", display: "inline-block" }}/>
-              NCCS цаг бүртгэлийн систем
-            </div>
-
-            {/* Headline */}
-            <h1 style={{
-              fontSize: "clamp(2.2rem, 4.4vw, 3.6rem)",
-              fontWeight: 900, lineHeight: 1.1, letterSpacing: "-0.03em",
-              color: "#fff", marginBottom: 24,
-            }}>
-              Инженерийн ажлын цагийг
-              <span style={{
-                display: "block",
-                background: "linear-gradient(135deg, #818cf8, #38bdf8)",
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-              }}>
-                нэг дор удирдана
-              </span>
-            </h1>
-
-            <p style={{ fontSize: 17, color: "#94a3b8", lineHeight: 1.7, maxWidth: 480, marginBottom: 48, fontWeight: 400 }}>
-              Төсөл, даалгавар, цагийн бүртгэлийг нэгдсэн системд хадгалж — багийн ажлыг ил тод, хэмжигдэхүйц болгоно.
-            </p>
-
-            {/* CTA buttons */}
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <a
-                href="#login"
-                style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "14px 32px", borderRadius: 14, fontSize: 15, fontWeight: 700,
-                  background: "linear-gradient(135deg, #6366f1, #3b82f6)",
-                  color: "#fff", border: "none", cursor: "pointer", textDecoration: "none",
-                  boxShadow: "0 8px 32px rgba(99,102,241,0.4)",
-                  transition: "all 0.25s",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(99,102,241,0.5)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(99,102,241,0.4)"; }}
-              >
-                Нэвтрэх
-              </a>
-              <a href="#features" style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "14px 28px", borderRadius: 14, fontSize: 14, fontWeight: 600,
-                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                color: "#cbd5e1", textDecoration: "none", transition: "all 0.2s",
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.09)"}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
-              >
-                Онцлогийг үзэх
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </a>
-            </div>
+        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center", position: "relative" }}>
+          {/* Badge */}
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            padding: "6px 16px", borderRadius: 100,
+            background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)",
+            fontSize: 12, color: "#a5b4fc", fontWeight: 600, letterSpacing: "0.05em",
+            marginBottom: 32, textTransform: "uppercase",
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6366f1", display: "inline-block" }}/>
+            NCCS цаг бүртгэлийн систем
           </div>
 
-          {/* Right: 3D model */}
-          <div style={{
-            flex: "1 1 380px", minWidth: 300, height: 440,
-            position: "relative",
+          {/* Headline */}
+          <h1 style={{
+            fontSize: "clamp(2.4rem, 5vw, 4rem)",
+            fontWeight: 900, lineHeight: 1.1, letterSpacing: "-0.03em",
+            color: "#fff", marginBottom: 24,
           }}>
-            <Hero3D />
+            Инженерийн ажлын цагийг
+            <span style={{
+              display: "block",
+              background: "linear-gradient(135deg, #818cf8, #38bdf8)",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            }}>
+              нэг дор удирдана
+            </span>
+          </h1>
+
+          <p style={{ fontSize: 17, color: "#94a3b8", lineHeight: 1.7, maxWidth: 560, margin: "0 auto 48px", fontWeight: 400 }}>
+            Төсөл, даалгавар, цагийн бүртгэлийг нэгдсэн системд хадгалж — багийн ажлыг ил тод, хэмжигдэхүйц болгоно.
+          </p>
+
+          {/* CTA buttons */}
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={login}
+              disabled={isLoading}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "14px 32px", borderRadius: 14, fontSize: 15, fontWeight: 700,
+                background: "linear-gradient(135deg, #6366f1, #3b82f6)",
+                color: "#fff", border: "none", cursor: "pointer",
+                boxShadow: "0 8px 32px rgba(99,102,241,0.4)",
+                transition: "all 0.25s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(99,102,241,0.5)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(99,102,241,0.4)"; }}
+            >
+              <svg width="18" height="18" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+              </svg>
+              Microsoft-оор нэвтрэх
+            </button>
+            <a href="#features" style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "14px 28px", borderRadius: 14, fontSize: 14, fontWeight: 600,
+              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+              color: "#cbd5e1", textDecoration: "none", transition: "all 0.2s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.09)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+            >
+              Онцлогийг үзэх
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
           </div>
         </div>
 
@@ -310,11 +286,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── LOGIN FORM ── */}
-      <section id="login" style={{ padding: "60px 2rem 100px" }}>
+      {/* ── LOGIN CTA ── */}
+      <section style={{ padding: "60px 2rem 100px" }}>
         <div style={{
-          maxWidth: 440, margin: "0 auto",
-          padding: "48px 40px",
+          maxWidth: 600, margin: "0 auto", textAlign: "center",
+          padding: "56px 48px",
           background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(59,130,246,0.08))",
           border: "1px solid rgba(99,102,241,0.25)", borderRadius: 24,
           position: "relative", overflow: "hidden",
@@ -325,79 +301,37 @@ export default function LandingPage() {
             background: "radial-gradient(circle, rgba(99,102,241,0.2), transparent 70%)",
             pointerEvents: "none",
           }}/>
-          <div style={{ textAlign: "center", position: "relative" }}>
-            <div style={{ fontSize: 12, color: "#6366f1", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>
-              Эхлэх бэлэн үү?
-            </div>
-            <h2 style={{ fontSize: "clamp(1.5rem, 3vw, 2rem)", fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", marginBottom: 8 }}>
-              Бүртгэлээрээ нэвтэрнэ үү
-            </h2>
-            <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6, marginBottom: 32 }}>
-              Admin-аас олгосон нэвтрэх нэр, нууц үгээ ашиглана уу.
-            </p>
+          <div style={{ fontSize: 12, color: "#6366f1", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>
+            Эхлэх бэлэн үү?
           </div>
-
-          <form onSubmit={handleLogin} style={{ position: "relative", textAlign: "left" }}>
-            <label style={{ display: "block", fontSize: 12, color: "#a5b4fc", fontWeight: 600, marginBottom: 8 }}>
-              Нэвтрэх нэр
-            </label>
-            <input
-              type="text"
-              autoComplete="username"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="жишээ: it@nccs.mn"
-              style={{
-                width: "100%", padding: "12px 16px", borderRadius: 12, marginBottom: 20,
-                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
-                color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box",
-              }}
-            />
-
-            <label style={{ display: "block", fontSize: 12, color: "#a5b4fc", fontWeight: 600, marginBottom: 8 }}>
-              Нууц үг
-            </label>
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              style={{
-                width: "100%", padding: "12px 16px", borderRadius: 12, marginBottom: 20,
-                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
-                color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box",
-              }}
-            />
-
-            {error && (
-              <div style={{
-                fontSize: 13, color: "#fca5a5", background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10,
-                padding: "10px 14px", marginBottom: 20,
-              }}>
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                padding: "14px 36px", borderRadius: 14, fontSize: 14, fontWeight: 700,
-                background: "linear-gradient(135deg, #6366f1, #3b82f6)",
-                color: "#fff", border: "none", cursor: submitting ? "default" : "pointer",
-                opacity: submitting ? 0.7 : 1,
-                boxShadow: "0 8px 32px rgba(99,102,241,0.4)",
-                transition: "all 0.25s",
-              }}
-              onMouseEnter={e => { if (!submitting) e.currentTarget.style.transform = "translateY(-2px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
-            >
-              {submitting ? "Нэвтэрч байна..." : "Нэвтрэх"}
-            </button>
-          </form>
+          <h2 style={{ fontSize: "clamp(1.5rem, 3vw, 2rem)", fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", marginBottom: 16 }}>
+            Байгууллагын бүртгэлээр нэвтэрнэ үү
+          </h2>
+          <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6, marginBottom: 36 }}>
+            Зөвхөн NCCS-ийн Microsoft 365 бүртгэлтэй хэрэглэгчид нэвтэрч болно.
+          </p>
+          <button
+            onClick={login}
+            disabled={isLoading}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 10,
+              padding: "14px 36px", borderRadius: 14, fontSize: 14, fontWeight: 700,
+              background: "linear-gradient(135deg, #6366f1, #3b82f6)",
+              color: "#fff", border: "none", cursor: "pointer",
+              boxShadow: "0 8px 32px rgba(99,102,241,0.4)",
+              transition: "all 0.25s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+          >
+            <svg width="18" height="18" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+              <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+              <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+              <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+            </svg>
+            {isLoading ? "Нэвтэрч байна..." : "Microsoft-оор нэвтрэх"}
+          </button>
         </div>
       </section>
 

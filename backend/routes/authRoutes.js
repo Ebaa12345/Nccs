@@ -1,43 +1,25 @@
 // 📁 src/routes/authRoutes.js
-const express = require('express');
-const router  = express.Router();
-const jwt     = require('jsonwebtoken');
-const User    = require('../models/User');
+const express  = require('express');
+const router   = express.Router();
+const bcrypt   = require('bcryptjs');
+const User     = require('../models/User');
 
-// POST /api/auth/azure-callback
-router.post('/azure-callback', async (req, res) => {
+// POST /api/auth/login
+router.post('/login', async (req, res) => {
   try {
-    const { idToken } = req.body;
-    if (!idToken) return res.status(400).json({ error: 'idToken байхгүй байна' });
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Нэвтрэх нэр, нууц үг заавал шаардлагатай' });
+    }
 
-    const decoded = jwt.decode(idToken);
-    if (!decoded) return res.status(400).json({ error: 'Token буруу байна' });
+    const user = await User.findOne({ where: { username } });
+    if (!user || !user.password) {
+      return res.status(401).json({ error: 'Нэвтрэх нэр эсвэл нууц үг буруу байна' });
+    }
 
-    const microsoftId = decoded.oid;
-    const email       = decoded.preferred_username || decoded.email || '';
-    const firstName   = decoded.given_name   || '';
-    const lastName    = decoded.family_name  || '';
-    const displayName = decoded.name || `${firstName} ${lastName}`.trim() || email;
-    const username    = email.split('@')[0] || microsoftId;
-
-    if (!microsoftId) return res.status(400).json({ error: 'Microsoft ID олдсонгүй' });
-
-    // ✅ findOrCreate ашиглан давхар бүртгэл үүсэхээс сэргийлнэ
-    const [user, created] = await User.findOrCreate({
-      where: { microsoftId },
-      defaults: {
-        username,
-        displayName,
-        firstName,
-        lastName,
-        role: 'user',
-        password: '',
-      },
-    });
-
-    // Байгаа хэрэглэгч бол нэрийг шинэчлэнэ
-    if (!created) {
-      await user.update({ displayName, firstName, lastName });
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ error: 'Нэвтрэх нэр эсвэл нууц үг буруу байна' });
     }
 
     res.json({
@@ -51,7 +33,7 @@ router.post('/azure-callback', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Azure callback алдаа:', err);
+    console.error('Нэвтрэхэд алдаа:', err);
     res.status(500).json({ error: 'Серверийн алдаа' });
   }
 });

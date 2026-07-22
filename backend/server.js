@@ -27,7 +27,6 @@ app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().
 app.use('/api/auth',    require('./routes/authRoutes'));
 app.use('/api/appdata', require('./routes/appDataRoutes'));
 app.use('/api/tasks',   require('./routes/taskRoutes'));
-app.use('/api',         require('./routes/apiRoutes'));
 
 app.use((req, res) => res.status(404).json({ error: `Route олдсонгүй: ${req.method} ${req.path}` }));
 app.use((err, req, res, next) => {
@@ -40,7 +39,11 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   await connectDB();
   // ✅ alter:true — Tasks хүснэгтэд startDate багана нэмнэ, бусад өгөгдөл хэвээр үлдэнэ
+ if (process.env.NODE_ENV === 'development') {
   await sequelize.sync({ alter: true });
+} else {
+  await sequelize.sync();
+}
   console.log('✅ MySQL хүснэгтүүд синхрончлогдлоо (startDate нэмэгдлээ).');
   app.listen(PORT, () => console.log(`✅ Сервер http://localhost:${PORT} дээр ажиллаж байна.`));
 };

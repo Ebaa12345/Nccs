@@ -1,9 +1,51 @@
 // 📁 src/pages/TimeLogsPage.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Avatar, Modal, FormGroup, ConfirmModal, EmptyState } from "../components/UI";
 import { useAppContext } from "../context/AppContext";
 
 const WEEKDAYS = ["Даваа", "Мягмар", "Лхагва", "Пүрэв", "Баасан", "Бямба", "Ням"];
+
+// ── 3 цэгтэй dropdown товч ───────────────────────────────────
+function RowMenu({ onDelete }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition"
+        title="Үйлдэл"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="8" cy="3" r="1.4"/>
+          <circle cx="8" cy="8" r="1.4"/>
+          <circle cx="8" cy="13" r="1.4"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-8 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 min-w-[120px]">
+          <button
+            onClick={() => { setOpen(false); onDelete(); }}
+            className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition flex items-center gap-2"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+            Устгах
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Долоо хоногийн Даваагийн огноог буцаана (ISO — Даваа = эхлэл)
 function getMonday(d) {
@@ -276,12 +318,7 @@ export default function TimeLogsPage() {
                     <td className="p-3 font-semibold text-gray-900 dark:text-white">{getHours(l)}ц</td>
                     <td className="p-3 text-gray-400 font-mono">{getDate(l)}</td>
                     <td className="p-3 text-right">
-                      <button
-                        onClick={() => triggerDelete(l.id)}
-                        className="text-red-500 hover:underline font-medium"
-                      >
-                        Устгах
-                      </button>
+                      <RowMenu onDelete={() => triggerDelete(l.id)} />
                     </td>
                   </tr>
                 ))}

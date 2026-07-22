@@ -1,39 +1,30 @@
 // 📁 src/pages/UsersPage.jsx
-import { useState } from "react";
-import { Modal, FormGroup } from "../components/UI";
+import { useState, useMemo } from "react";
+import { Modal, FormGroup, Avatar, StatusBadge } from "../components/UI";
 import { useAppContext } from "../context/AppContext";
 
 const STATUSES = ["Идэвхтэй", "Хүлээгдэж байна", "Идэвхгүй"];
 
-function LocalAvatar({ firstName, lastName, username }) {
-  const initials = firstName && lastName
-    ? `${firstName[0]}${lastName[0]}`
-    : username
-      ? username.slice(0, 2)
-      : "U";
-  return (
-    <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs uppercase">
-      {initials}
-    </div>
-  );
-}
+const ROLE_STYLE = {
+  admin:   "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400 border border-violet-200 dark:border-violet-900",
+  manager: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400 border border-sky-200 dark:border-sky-900",
+  user:    "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700",
+};
+const ROLE_LABEL = { admin: "Админ", manager: "Менежер", user: "Хэрэглэгч" };
 
-function LocalStatusBadge({ status }) {
-  const isOk = status === "Идэвхтэй";
+function RoleBadge({ role }) {
   return (
-    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-      isOk
-        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
-        : "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400"
-    }`}>
-      {status || "Идэвхтэй"}
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${ROLE_STYLE[role] || ROLE_STYLE.user}`}>
+      {ROLE_LABEL[role] || role}
     </span>
   );
 }
 
+const EMPTY_USER_FORM = { username: "", password: "", firstName: "", lastName: "", role: "user" };
+
 export default function UsersPage() {
   const {
-    users, deleteUser, toggleProjectUser, assignJobTitle, jobTitles,
+    users, deleteUser, addUser, resetPassword, toggleProjectUser, assignJobTitle, jobTitles,
     projects, addProject, deleteProject,
     showNotify,
   } = useAppContext();
@@ -41,14 +32,54 @@ export default function UsersPage() {
   const [activeTab,     setActiveTab]     = useState("users");
   const [projForm,      setProjForm]      = useState({ name: "", client: "", contractNo: "" });
   const [assignModal,   setAssignModal]   = useState(false);
-  
+
   // ✅ ЗАСВАР: Төсөл нэмэх Модал цонхны төлөв
-  const [projectModal,  setProjectModal]  = useState(false); 
-  
+  const [projectModal,  setProjectModal]  = useState(false);
+
   const [selectedProject, setSelectedProject] = useState(null);
   const [saving,         setSaving]        = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [activeProjDropdown, setActiveProjDropdown] = useState(null);
+
+  const [userModal, setUserModal] = useState(false);
+  const [userForm,  setUserForm]  = useState(EMPTY_USER_FORM);
+  const [savingUser, setSavingUser] = useState(false);
+
+  const [passwordModal, setPasswordModal] = useState(null); // user object эсвэл null
+  const [newPassword,   setNewPassword]   = useState("");
+
+  const handleAddUserSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!userForm.username.trim() || !userForm.password) {
+      showNotify("⚠️ Нэвтрэх нэр болон нууц үгийг бөглөнө үү!");
+      return;
+    }
+    setSavingUser(true);
+    const saved = await addUser({
+      username:  userForm.username.trim(),
+      password:  userForm.password,
+      firstName: userForm.firstName.trim(),
+      lastName:  userForm.lastName.trim(),
+      role:      userForm.role,
+    });
+    setSavingUser(false);
+    if (saved) {
+      setUserForm(EMPTY_USER_FORM);
+      setUserModal(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async () => {
+    if (!newPassword || newPassword.length < 4) {
+      showNotify("⚠️ Нууц үг дор хаяж 4 тэмдэгт байх ёстой!");
+      return;
+    }
+    const ok = await resetPassword(passwordModal.id, newPassword);
+    if (ok) {
+      setPasswordModal(null);
+      setNewPassword("");
+    }
+  };
 
   // ✅ ЗАСВАР: Модал дотроос хадгалах үед ажиллах функц
   const handleAddProjectSubmit = async (e) => {
@@ -84,8 +115,38 @@ export default function UsersPage() {
     try { return JSON.parse(u.assignedProjects || "[]"); } catch { return []; }
   };
 
+  const roleCounts = useMemo(() => {
+    return users.reduce((acc, u) => {
+      acc[u.role] = (acc[u.role] || 0) + 1;
+      return acc;
+    }, {});
+  }, [users]);
+
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
+    <div className="max-w-6xl mx-auto space-y-5">
+
+      {/* Толгой — статистик */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: "Нийт хэрэглэгч", value: users.length,             icon: "👥" },
+          { label: "Админ",          value: roleCounts.admin || 0,     icon: "🛡️" },
+          { label: "Менежер",        value: roleCounts.manager || 0,   icon: "📊" },
+          { label: "Идэвхтэй төсөл", value: projects.length,           icon: "📁" },
+        ].map((s, i) => (
+          <div
+            key={s.label}
+            className="card p-4 flex items-center justify-between hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 animate-slide-up"
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{s.label}</p>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{s.value}</h3>
+            </div>
+            <span className="text-xl bg-gray-50 dark:bg-gray-800 p-2.5 rounded-xl flex-shrink-0">{s.icon}</span>
+          </div>
+        ))}
+      </div>
+
       {/* Таб */}
       <div className="flex gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
         {[
@@ -95,10 +156,10 @@ export default function UsersPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 text-xs font-medium rounded-xl transition-all ${
+            className={`px-4 py-2 text-xs font-medium rounded-xl transition-all duration-200 ${
               activeTab === tab.key
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 scale-[1.02]"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
             {tab.label}
@@ -108,15 +169,20 @@ export default function UsersPage() {
 
       {/* ── ХЭРЭГЛЭГЧИД ── */}
       {activeTab === "users" && (
-        <div className="card space-y-4">
+        <div className="card space-y-4 animate-fade-in">
           <div className="flex justify-between items-center">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Системийн хэрэглэгчид</h2>
+            <button
+              onClick={() => setUserModal(true)}
+              className="bg-indigo-600 text-white rounded-xl py-1.5 px-3.5 text-xs font-semibold hover:bg-indigo-700 hover:shadow-md active:scale-[0.97] transition-all shadow-sm flex items-center gap-1"
+            >
+              ➕ Хэрэглэгч нэмэх
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="text-gray-500 border-b dark:border-gray-800 uppercase text-[10px] tracking-wider">
-                  <th className="p-3">№</th>
                   <th className="p-3">Нэр</th>
                   <th className="p-3">И-мэйл</th>
                   <th className="p-3">Эрх</th>
@@ -129,37 +195,42 @@ export default function UsersPage() {
               <tbody>
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-gray-400 text-xs">
+                    <td colSpan={7} className="p-8 text-center text-gray-400 text-xs">
                       Одоогоор хэрэглэгч байхгүй байна.
                     </td>
                   </tr>
                 ) : (
-                  users.map((u) => {
+                  users.map((u, i) => {
                     const assigned = getAssigned(u);
+                    const name = u.firstName && u.lastName
+                      ? `${u.firstName} ${u.lastName}`
+                      : u.displayName || u.username;
                     return (
-                      <tr key={u.id} className="border-b dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                        <td className="p-3 font-medium text-gray-900 dark:text-white">
-                          {u.lastName || "—"}
-                        </td>
+                      <tr
+                        key={u.id}
+                        className="border-b dark:border-gray-800 hover:bg-gray-50/60 dark:hover:bg-gray-800/30 transition-colors duration-200 animate-fade-in"
+                        style={{ animationDelay: `${Math.min(i, 12) * 35}ms` }}
+                      >
                         <td className="p-3">
-                          <div className="flex items-center gap-2 text-gray-900 dark:text-white font-medium">
-                            <LocalAvatar firstName={u.firstName} lastName={u.lastName} username={u.username} />
-                            {u.firstName || u.displayName || u.username}
+                          <div className="flex items-center gap-2.5 text-gray-900 dark:text-white font-medium">
+                            <Avatar name={name} />
+                            <div className="min-w-0">
+                              <div className="truncate">{name}</div>
+                              {u.jobTitle && (
+                                <div className="text-[10px] text-gray-400 truncate">{u.jobTitle}</div>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="p-3 text-gray-500 font-mono">{u.username}</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-semibold text-[10px] text-gray-600 dark:text-gray-400 uppercase">
-                            {u.role}
-                          </span>
-                        </td>
+                        <td className="p-3"><RoleBadge role={u.role} /></td>
                         <td className="p-3">
                           <select
                             value={u.jobTitle || ""}
                             onChange={(e) => assignJobTitle(u.id, e.target.value)}
                             className="text-[11px] px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700
                                        bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-                                       focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                       focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-shadow"
                           >
                             <option value="">— Сонгоогүй —</option>
                             {jobTitles.map((jt) => (
@@ -176,7 +247,7 @@ export default function UsersPage() {
                             : <span className="text-gray-300 dark:text-gray-600">Төсөл байхгүй</span>
                           }
                         </td>
-                        <td className="p-3"><LocalStatusBadge status="Идэвхтэй" /></td>
+                        <td className="p-3"><StatusBadge status="Идэвхтэй" /></td>
                         <td className="p-3 text-right relative">
                           <button
                             onClick={(e) => {
@@ -191,7 +262,16 @@ export default function UsersPage() {
                           {activeDropdown === u.id && (
                             <>
                               <div className="fixed inset-0 z-10" onClick={() => setActiveDropdown(null)} />
-                              <div className="absolute right-3 mt-1 w-28 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl z-20 p-1 py-1.5 animate-fade-in">
+                              <div className="absolute right-3 mt-1 w-36 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl z-20 p-1 py-1.5 space-y-0.5 animate-fade-in">
+                                <button
+                                  onClick={() => {
+                                    setPasswordModal(u);
+                                    setActiveDropdown(null);
+                                  }}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg font-medium transition-colors flex items-center gap-1.5"
+                                >
+                                  🔑 Нууц үг солих
+                                </button>
                                 <button
                                   onClick={() => {
                                     deleteUser(u.id);
@@ -217,8 +297,8 @@ export default function UsersPage() {
 
       {/* ── ТӨСЛҮҮД ── */}
       {activeTab === "projects" && (
-        <div className="space-y-4">
-          
+        <div className="space-y-4 animate-fade-in">
+
           {/* Жагсаалтын карт */}
           <div className="card">
             {/* ✅ ЗАСВАР: Төслийн толгой хэсэгт "+ Төсөл нэмэх" товчийг байрлуулав */}
@@ -228,7 +308,7 @@ export default function UsersPage() {
               </h3>
               <button
                 onClick={() => setProjectModal(true)}
-                className="bg-indigo-600 text-white rounded-xl py-1.5 px-3.5 text-xs font-semibold hover:bg-indigo-700 transition-all shadow-sm flex items-center gap-1"
+                className="bg-indigo-600 text-white rounded-xl py-1.5 px-3.5 text-xs font-semibold hover:bg-indigo-700 hover:shadow-md active:scale-[0.97] transition-all shadow-sm flex items-center gap-1"
               >
                 ➕ Төсөл нэмэх
               </button>
@@ -251,8 +331,12 @@ export default function UsersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {projects.map((p) => (
-                      <tr key={p.id} className="border-b dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+                    {projects.map((p, i) => (
+                      <tr
+                        key={p.id}
+                        className="border-b dark:border-gray-800 hover:bg-gray-50/60 dark:hover:bg-gray-800/30 transition-colors duration-200 animate-fade-in"
+                        style={{ animationDelay: `${Math.min(i, 12) * 35}ms` }}
+                      >
                         <td className="p-3 font-medium text-gray-900 dark:text-white">{p.name}</td>
                         <td className="p-3">
                           <span className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded font-mono text-[11px] text-gray-600 dark:text-gray-300">
@@ -352,6 +436,87 @@ export default function UsersPage() {
           {saving && (
             <p className="text-[11px] text-indigo-500 animate-pulse">Төслийг системд бүртгэж байна, түр хүлээнэ үү...</p>
           )}
+        </div>
+      </Modal>
+
+      {/* ── Хэрэглэгч нэмэх Modal ── */}
+      <Modal
+        open={userModal}
+        title="👤 Шинэ хэрэглэгч нэмэх"
+        onClose={() => setUserModal(false)}
+        onSave={handleAddUserSubmit}
+      >
+        <div className="space-y-3.5 p-1">
+          <FormGroup label="Нэвтрэх нэр (username)">
+            <input
+              value={userForm.username}
+              onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+              placeholder="жишээ: bataa@nccs.mn"
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
+
+          <FormGroup label="Нууц үг">
+            <input
+              type="password"
+              value={userForm.password}
+              onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+              placeholder="Дор хаяж 4 тэмдэгт"
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
+
+          <FormGroup label="Овог">
+            <input
+              value={userForm.lastName}
+              onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
+
+          <FormGroup label="Нэр">
+            <input
+              value={userForm.firstName}
+              onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
+
+          <FormGroup label="Эрх">
+            <select
+              value={userForm.role}
+              onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+              className="input text-xs py-2 w-full"
+            >
+              <option value="user">Хэрэглэгч</option>
+              <option value="manager">Менежер</option>
+              <option value="admin">Админ</option>
+            </select>
+          </FormGroup>
+
+          {savingUser && (
+            <p className="text-[11px] text-indigo-500 animate-pulse">Хэрэглэгчийг системд бүртгэж байна, түр хүлээнэ үү...</p>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── Нууц үг солих Modal ── */}
+      <Modal
+        open={!!passwordModal}
+        title={`"${passwordModal?.displayName || passwordModal?.username}"-ийн нууц үг солих`}
+        onClose={() => { setPasswordModal(null); setNewPassword(""); }}
+        onSave={handleResetPasswordSubmit}
+      >
+        <div className="p-1">
+          <FormGroup label="Шинэ нууц үг">
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Дор хаяж 4 тэмдэгт"
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
         </div>
       </Modal>
 

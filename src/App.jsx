@@ -20,9 +20,10 @@ import TasksPage from "./pages/TasksPage";
 function ProtectedRoute({ allowedRoles }) {
   const { user, isLoading } = useAuth();
 
+  // user ачааллаж байх үед хүлээ
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
         <Spinner />
       </div>
     );
@@ -37,16 +38,23 @@ function ProtectedRoute({ allowedRoles }) {
   return <Outlet />;
 }
 
-// ✅ ЗАСВАР: Toast-ийг AppContext-оос авна, prop drilling байхгүй
 function ToastLayer() {
   const { toast, setToast } = useAppContext();
   return toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null;
 }
 
 function AppShell() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
 
-  // ✅ ЗАСВАР: user?.role — null байхад crash болохгүй
+  // ✅ user бэлэн болохыг хүлээ
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Spinner />
+      </div>
+    );
+  }
+
   const fallbackPath = user
     ? user.role === "user" ? "/home" : "/dashboard"
     : "/login";
@@ -55,8 +63,9 @@ function AppShell() {
     <>
       <ToastLayer />
       <Routes>
-        {/* Нэвтрэх */}
-        <Route path="/login" element={<LoginPage />} />
+        {/* Landing + Login */}
+        <Route path="/" element={user ? <Navigate to={fallbackPath} replace /> : <LoginPage />} />
+        <Route path="/login" element={user ? <Navigate to={fallbackPath} replace /> : <LoginPage />} />
 
         {/* 👤 Энгийн хэрэглэгч */}
         <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
@@ -69,14 +78,12 @@ function AppShell() {
         {/* 💼 Админ / Менежер */}
         <Route element={<ProtectedRoute allowedRoles={["admin", "manager"]} />}>
           <Route element={<Layout />}>
-          <Route path="/home" element={<ClientHome />} />
+            <Route path="/home" element={<ClientHome />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/dashboard/timelogs" element={<TimeLogsPage />} />
             <Route path="/dashboard/reports" element={<ReportsPage />} />
             <Route path="/dashboard/profile" element={<ProfilePage />} />
             <Route path="/dashboard/tasks" element={<TasksPage />} />
-            // Admin/Manager route-ын дотор:
-            
 
             {/* Зөвхөн Админ */}
             <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>

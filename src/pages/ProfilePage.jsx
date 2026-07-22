@@ -49,7 +49,7 @@ export default function ProfilePage() {
       {/* Хувийн мэдээлэл */}
       <div className="card flex items-center gap-5">
         <div className="w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xl uppercase flex-shrink-0">
-          {user?.name?.slice(0, 2) || "U"}
+          {user?.name?.slice(0, 2) || ""}
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white truncate">{user?.name}</h2>
