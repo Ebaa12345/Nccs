@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAppContext } from "../context/AppContext";
+import ProgressBar from "../components/ProgressBar";
 
 const PRIORITY_STYLE = {
   High:   "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400",
@@ -45,6 +46,18 @@ export default function DashboardPage() {
     return d < today;
   };
 
+  // ✅ Task бүрийн логдсон цагийг (project + engineer таарсан time log-оор) тооцно — TasksPage-тэй ижил логик
+  const loggedMap = useMemo(() => {
+    const m = {};
+    tasks.forEach(t => {
+      const hours = timeLogs
+        .filter(l => l.projectId == t.projectId && l.userId == t.assignedUserId)
+        .reduce((sum, l) => sum + Number(l.hours ?? l.hoursSpent ?? 0), 0);
+      m[t.id] = hours;
+    });
+    return m;
+  }, [tasks, timeLogs]);
+
   const stats = useMemo(() => {
     const activeProjects = projects.filter(p => p.status === "Идэвхтэй").length;
     const oneWeekAgo = new Date();
@@ -52,8 +65,19 @@ export default function DashboardPage() {
     const weeklyHours = timeLogs
       .filter(l => new Date(getDate(l)) >= oneWeekAgo)
       .reduce((sum, l) => sum + getHours(l), 0);
-    return { activeUsers: users.length, activeProjects, weeklyHours };
-  }, [users, timeLogs, projects]);
+
+    const withEstimate = tasks.filter(t => Number(t.estimatedHours) > 0);
+    const avgProgress = withEstimate.length
+      ? Math.round(
+          withEstimate.reduce((sum, t) => {
+            const pct = Math.min((loggedMap[t.id] || 0) / Number(t.estimatedHours) * 100, 100);
+            return sum + pct;
+          }, 0) / withEstimate.length
+        )
+      : 0;
+
+    return { activeUsers: users.length, activeProjects, weeklyHours, avgProgress };
+  }, [users, timeLogs, projects, tasks, loggedMap]);
 
   const recentLogs = useMemo(() => {
     return [...timeLogs]
@@ -82,18 +106,31 @@ export default function DashboardPage() {
       </div>
 
       {/* Статистик */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Нийт хэрэглэгчид",      value: stats.activeUsers,    icon: "👥" },
           { label: "Идэвхтэй төслүүд",       value: stats.activeProjects, icon: "📁" },
           { label: "Сүүлийн 7 хоногийн цаг", value: `${stats.weeklyHours} ц`, icon: "⏱" },
-        ].map(s => (
-          <div key={s.label} className="card p-4 flex items-center justify-between">
-            <div>
+          { label: "Дундаж явц",            value: `${stats.avgProgress}%`, icon: "📈", progress: stats.avgProgress },
+        ].map((s, i) => (
+          <div
+            key={s.label}
+            className="card p-4 flex items-center justify-between hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 animate-slide-up"
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            <div className="min-w-0">
               <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{s.label}</p>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{s.value}</h3>
+              {s.progress !== undefined && (
+                <div className="mt-2 w-24 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-blue-400 transition-[width] duration-700 ease-out"
+                    style={{ width: `${s.progress}%` }}
+                  />
+                </div>
+              )}
             </div>
-            <span className="text-xl bg-gray-50 dark:bg-gray-800 p-2.5 rounded-xl">{s.icon}</span>
+            <span className="text-xl bg-gray-50 dark:bg-gray-800 p-2.5 rounded-xl flex-shrink-0">{s.icon}</span>
           </div>
         ))}
       </div>
@@ -121,6 +158,7 @@ export default function DashboardPage() {
                 <th className="p-4">Project</th>
                 <th className="p-4">Engineer</th>
                 <th className="p-4 text-center">Est.</th>
+                <th className="p-4">Явц</th>
                 <th className="p-4">Due</th>
                 <th className="p-4">Priority</th>
                 <th className="p-4">Status</th>
@@ -130,15 +168,20 @@ export default function DashboardPage() {
             <tbody>
               {tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-gray-400">
+                  <td colSpan={9} className="p-8 text-center text-gray-400">
                     Одоогоор ямар нэгэн Task үүсээгүй байна.
                   </td>
                 </tr>
-              ) : tasks.map(t => {
-                const est  = Number(t.estimatedHours) || 0;
-                const over = isOverdue(t.dueDate) && t.status !== "Completed";
+              ) : tasks.map((t, i) => {
+                const est    = Number(t.estimatedHours) || 0;
+                const logged = loggedMap[t.id] || 0;
+                const over   = isOverdue(t.dueDate) && t.status !== "Completed";
                 return (
-                  <tr key={t.id} className="border-b dark:border-gray-800 hover:bg-gray-50/40 dark:hover:bg-gray-800/20 transition">
+                  <tr
+                    key={t.id}
+                    className="border-b dark:border-gray-800 hover:bg-gray-50/40 dark:hover:bg-gray-800/20 transition-colors animate-fade-in"
+                    style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}
+                  >
                     <td className="p-4 font-medium text-gray-900 dark:text-white max-w-[180px]">
                       <span className="truncate block" title={t.title}>{t.title}</span>
                     </td>
@@ -150,6 +193,9 @@ export default function DashboardPage() {
                     </td>
                     <td className="p-4 text-center text-gray-600 dark:text-gray-400 font-mono">
                       {est > 0 ? `${est}h` : "—"}
+                    </td>
+                    <td className="p-4">
+                      <ProgressBar logged={logged} estimated={est} />
                     </td>
                     <td className={`p-4 font-mono whitespace-nowrap text-xs ${over ? "text-orange-500 font-semibold" : "text-gray-500"}`}>
                       {formatDate(t.dueDate)}

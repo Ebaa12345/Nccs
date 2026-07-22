@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useAppContext } from "../context/AppContext";
 import { MoreVertical } from "lucide-react";
+import ProgressBar from "../components/ProgressBar";
 
 
 const PRIORITIES = ["Low", "Medium", "High"];
@@ -24,19 +25,6 @@ function Avatar({ name }) {
   return (
     <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
       {initials}
-    </div>
-  );
-}
-
-function ProgressBar({ logged, estimated }) {
-  const pct = estimated > 0 ? Math.min(Math.round((logged / estimated) * 100), 100) : 0;
-  const color = pct >= 100 ? "bg-emerald-500" : pct >= 60 ? "bg-indigo-500" : pct > 0 ? "bg-amber-400" : "bg-gray-200 dark:bg-gray-700";
-  return (
-    <div className="flex items-center gap-2 min-w-[130px]">
-      <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-[11px] text-gray-500 w-9 text-right font-mono">{pct}%</span>
     </div>
   );
 }
