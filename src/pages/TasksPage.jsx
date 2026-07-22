@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useAppContext } from "../context/AppContext";
+import { MoreVertical } from "lucide-react";
+
 
 const PRIORITIES = ["Low", "Medium", "High"];
 const STATUSES   = ["In progress", "Completed", "On hold"];
@@ -39,7 +41,7 @@ function ProgressBar({ logged, estimated }) {
   );
 }
 
-// ── Шинэ/Засах Task Modal ─────────────────────────────────────
+// ── Task Modal ─────────────────────────────────────────────────
 function TaskModal({ open, onClose, onSave, projects, users, initial }) {
   const empty = {
     title: "", description: "", projectId: "", assignedUserId: "",
@@ -48,16 +50,33 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
   };
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (open) setForm(initial ? { ...empty, ...initial, projectId: initial.projectId || initial.project?.id || "" } : empty);
+    if (open) {
+      setErrors({});
+      setForm(initial
+        ? { ...empty, ...initial, projectId: initial.projectId || initial.project?.id || "" }
+        : empty
+      );
+    }
   }, [open, initial]);
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }));
+    if (errors[k]) setErrors(e => ({ ...e, [k]: null }));
+  };
+
+  const validate = () => {
+    const e = {};
+    if (!form.title.trim()) e.title = "Гарчиг бөглөнө үү";
+    if (!form.projectId)    e.projectId = "Төсөл сонгоно уу";
+    return e;
+  };
 
   const handleSave = async () => {
-    if (!form.title.trim()) return alert("Гарчиг бөглөнө үү");
-    if (!form.projectId)    return alert("Төсөл сонгоно уу");
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
     await onSave(form);
     setSaving(false);
@@ -65,59 +84,121 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
   };
 
   if (!open) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-gray-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xl border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
+
         {/* Гарчиг */}
-        <div className="px-5 py-4 border-b dark:border-gray-800">
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-            {initial ? "Task засварлах" : "New task"}
-          </h2>
+        <div className="px-6 py-4 border-b dark:border-gray-800 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+              {initial ? "Task засварлах" : "Шинэ task нэмэх"}
+            </h2>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {initial ? `#${initial.id} · ${initial.title}` : "Шаардлагатай талбаруудыг бөглөнө үү"}
+            </p>
+          </div>
+          <button onClick={onClose}
+            className="w-7 h-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center text-gray-400 transition text-lg leading-none">
+            ×
+          </button>
         </div>
 
-        <div className="px-5 py-4 space-y-3">
+        {/* Форм */}
+        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+
           {/* Task нэр */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Task нэр <span className="text-red-500">*</span></label>
-            <input value={form.title} onChange={e => set("title", e.target.value)}
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              Task нэр <span className="text-red-500">*</span>
+            </label>
+            <input
+              value={form.title}
+              onChange={e => set("title", e.target.value)}
               placeholder="e.g. CAD design review"
-              className="input w-full text-xs mt-1" />
+              className={`input w-full text-xs ${errors.title ? "border-red-400 focus:ring-red-400/20" : ""}`}
+            />
+            {errors.title && <p className="text-[10px] text-red-500 mt-1">{errors.title}</p>}
           </div>
 
-          {/* Төсөл + Est цаг — нэг мөрт */}
+          {/* Тайлбар */}
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              Тайлбар
+            </label>
+            <textarea
+              value={form.description}
+              onChange={e => set("description", e.target.value)}
+              placeholder="Task-ийн дэлгэрэнгүй тайлбар..."
+              rows={3}
+              className="input w-full text-xs resize-none"
+            />
+          </div>
+
+          {/* Төсөл + Est цаг */}
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Төсөл <span className="text-red-500">*</span></label>
-              <select value={form.projectId} onChange={e => set("projectId", e.target.value)}
-                className="input w-full text-xs mt-1">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Төсөл <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.projectId}
+                onChange={e => set("projectId", e.target.value)}
+                className={`input w-full text-xs ${errors.projectId ? "border-red-400" : ""}`}
+              >
                 <option value="">— Сонгоно уу —</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
+              {errors.projectId && <p className="text-[10px] text-red-500 mt-1">{errors.projectId}</p>}
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Est. цаг</label>
-              <input type="number" min={0} value={form.estimatedHours}
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Est. цаг
+              </label>
+              <input
+                type="number" min={0}
+                value={form.estimatedHours}
                 onChange={e => set("estimatedHours", e.target.value)}
-                placeholder="40" className="input w-full text-xs mt-1" />
+                placeholder="40"
+                className="input w-full text-xs"
+              />
             </div>
           </div>
 
-          {/* Start date + Delivery date + Priority — нэг мөрт */}
+          {/* Start + Due + Priority */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Start date</label>
-              <input type="date" value={form.startDate || ""} onChange={e => set("startDate", e.target.value)}
-                className="input w-full text-xs mt-1" />
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Start date
+              </label>
+              <input
+                type="date"
+                value={form.startDate || ""}
+                onChange={e => set("startDate", e.target.value)}
+                className="input w-full text-xs"
+              />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Delivery date</label>
-              <input type="date" value={form.dueDate || ""} onChange={e => set("dueDate", e.target.value)}
-                className="input w-full text-xs mt-1" />
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Delivery date
+              </label>
+              <input
+                type="date"
+                value={form.dueDate || ""}
+                onChange={e => set("dueDate", e.target.value)}
+                className="input w-full text-xs"
+              />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Priority</label>
-              <select value={form.priority} onChange={e => set("priority", e.target.value)}
-                className="input w-full text-xs mt-1">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                Priority
+              </label>
+              <select
+                value={form.priority}
+                onChange={e => set("priority", e.target.value)}
+                className="input w-full text-xs"
+              >
                 {PRIORITIES.map(p => <option key={p}>{p}</option>)}
               </select>
             </div>
@@ -125,28 +206,75 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
 
           {/* Status */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</label>
-            <select value={form.status} onChange={e => set("status", e.target.value)}
-              className="input w-full text-xs mt-1">
-              {STATUSES.map(s => <option key={s}>{s}</option>)}
-            </select>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              Status
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {STATUSES.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => set("status", s)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${
+                    form.status === s
+                      ? STATUS_STYLE[s] + " ring-2 ring-offset-1 ring-current"
+                      : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Assign engineers — жижигрүүлсэн жагсаалт */}
+          {/* Engineer сонгох */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assign engineer</label>
-            <div className="border rounded-xl dark:border-gray-700 divide-y dark:divide-gray-800 max-h-32 overflow-y-auto mt-1">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              Assign engineer
+            </label>
+            <div className="border rounded-xl dark:border-gray-700 divide-y dark:divide-gray-800 max-h-40 overflow-y-auto">
+              {/* Хоосон сонголт */}
+              <label className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
+                <input
+                  type="radio"
+                  name="engineer"
+                  checked={!form.assignedUserId}
+                  onChange={() => set("assignedUserId", "")}
+                  className="accent-indigo-600"
+                />
+                <span className="text-xs text-gray-400 italic">— Хуваарилахгүй —</span>
+              </label>
               {users.map(u => {
                 const name = u.firstName && u.lastName
                   ? `${u.firstName} ${u.lastName}`
                   : u.displayName || u.username;
+                const isSelected = String(form.assignedUserId) === String(u.id);
                 return (
-                  <label key={u.id} className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <input type="radio" name="engineer" checked={String(form.assignedUserId) === String(u.id)}
-                      onChange={() => set("assignedUserId", u.id)} className="accent-indigo-600" />
+                  <label
+                    key={u.id}
+                    className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition ${
+                      isSelected
+                        ? "bg-indigo-50 dark:bg-indigo-950/30"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="engineer"
+                      checked={isSelected}
+                      onChange={() => set("assignedUserId", u.id)}
+                      className="accent-indigo-600"
+                    />
                     <Avatar name={name} />
-                    <span className="text-xs font-medium text-gray-800 dark:text-gray-200 flex-1">{name}</span>
-                    <span className="text-[10px] text-gray-400">{u.username}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block truncate">
+                        {name}
+                      </span>
+                      {u.jobTitle && (
+                        <span className="text-[10px] text-gray-400 block">{u.jobTitle}</span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-gray-400 flex-shrink-0">{u.username}</span>
                   </label>
                 );
               })}
@@ -155,14 +283,27 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
         </div>
 
         {/* Товч */}
-        <div className="px-5 py-4 border-t dark:border-gray-800 flex gap-3">
-          <button onClick={handleSave} disabled={saving}
-            className="flex-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold py-2 rounded-xl text-xs hover:opacity-90 transition disabled:opacity-50">
-            {saving ? "Хадгалж байна..." : initial ? "Хадгалах" : "Create task"}
+        <div className="px-6 py-4 border-t dark:border-gray-800 flex gap-3 flex-shrink-0">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold py-2.5 rounded-xl text-xs hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <>
+                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Хадгалж байна...
+              </>
+            ) : initial ? "Хадгалах" : "Task үүсгэх"}
           </button>
-          <button onClick={onClose}
-            className="px-5 py-2 rounded-xl text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            Cancel
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition font-medium"
+          >
+            Цуцлах
           </button>
         </div>
       </div>
@@ -182,12 +323,11 @@ export default function TasksPage() {
   const [filterProj,   setFilterProj]   = useState("");
   const [filterUser,   setFilterUser]   = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [openMenu, setOpenMenu] = useState(null);
 
-  // TimeLog-оос task бүрт logged цагийг projectId + assignedUserId-аар тооцох
   const loggedMap = (() => {
     const m = {};
     tasks.forEach(t => {
-      const key = `${t.projectId}_${t.assignedUserId}`;
       const hours = timeLogs
         .filter(l => l.projectId == t.projectId && l.userId == t.assignedUserId)
         .reduce((sum, l) => sum + Number(l.hours || l.hoursSpent || 0), 0);
@@ -240,9 +380,9 @@ export default function TasksPage() {
   };
 
   const filtered = tasks.filter(t => {
-    if (filterProj   && String(t.projectId) !== String(filterProj))      return false;
-    if (filterUser   && String(t.assignedUserId) !== String(filterUser))  return false;
-    if (filterStatus && t.status !== filterStatus)                         return false;
+    if (filterProj   && String(t.projectId) !== String(filterProj))     return false;
+    if (filterUser   && String(t.assignedUserId) !== String(filterUser)) return false;
+    if (filterStatus && t.status !== filterStatus)                        return false;
     return true;
   });
 
@@ -333,46 +473,48 @@ export default function TasksPage() {
 
                 return (
                   <tr key={t.id} className="border-b dark:border-gray-800 hover:bg-gray-50/40 dark:hover:bg-gray-800/20 transition">
-                    {/* Task */}
                     <td className="p-4 font-medium text-gray-900 dark:text-white max-w-[160px]">
                       <span className="truncate block" title={t.title}>{t.title}</span>
+                      {t.description && (
+                        <span className="text-[10px] text-gray-400 truncate block mt-0.5" title={t.description}>
+                          {t.description}
+                        </span>
+                      )}
                     </td>
-                    {/* Project */}
                     <td className="p-4 text-gray-500 max-w-[160px]">
                       <span className="truncate block">{t.project?.name || "—"}</span>
                     </td>
-                    {/* Engineer */}
                     <td className="p-4">
                       {eName ? (
                         <div className="flex items-center gap-1.5">
                           <Avatar name={eName} />
-                          <span className="text-gray-700 dark:text-gray-300 font-medium">{eName}</span>
+                          <div>
+                            <span className="text-gray-700 dark:text-gray-300 font-medium block">{eName}</span>
+                            {t.engineer?.jobTitle && (
+                              <span className="text-[10px] text-gray-400">{t.engineer.jobTitle}</span>
+                            )}
+                          </div>
                         </div>
                       ) : <span className="text-gray-400">—</span>}
                     </td>
-                    {/* Est */}
                     <td className="p-4 text-center text-gray-600 dark:text-gray-400 font-mono">
                       {est > 0 ? `${est}h` : "—"}
                     </td>
-                    {/* Logged */}
                     <td className="p-4 text-center text-gray-600 dark:text-gray-400 font-mono">
                       {logged > 0 ? `${logged}h` : "—"}
                     </td>
-                    {/* Progress */}
                     <td className="p-4">
                       <ProgressBar logged={logged} estimated={est} />
                     </td>
-                    {/* Due date */}
                     <td className={`p-4 font-mono whitespace-nowrap text-xs ${over ? "text-orange-500 font-semibold" : "text-gray-500"}`}>
+                      {over && <span className="mr-1">⚠</span>}
                       {formatDate(t.dueDate)}
                     </td>
-                    {/* Priority */}
                     <td className="p-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${PRIORITY_STYLE[t.priority] || PRIORITY_STYLE.Medium}`}>
                         {t.priority}
                       </span>
                     </td>
-                    {/* Status — dropdown */}
                     <td className="p-4">
                       <select
                         value={t.status}
@@ -382,13 +524,39 @@ export default function TasksPage() {
                         {STATUSES.map(s => <option key={s}>{s}</option>)}
                       </select>
                     </td>
-                    {/* Үйлдэл */}
-                    <td className="p-4 text-right whitespace-nowrap space-x-2">
-                      <button onClick={() => { setEditTask(t); setModalOpen(true); }}
-                        className="text-indigo-500 hover:underline font-medium">Засах</button>
-                      <button onClick={() => handleDelete(t.id)}
-                        className="text-red-500 hover:underline font-medium">Устгах</button>
-                    </td>
+                    <td className="p-4 text-right relative">
+  <button
+    onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)}
+    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+  >
+    <MoreVertical size={18} />
+  </button>
+
+  {openMenu === t.id && (
+    <div className="absolute right-4 top-12 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden">
+      <button
+        onClick={() => {
+          setEditTask(t);
+          setModalOpen(true);
+          setOpenMenu(null);
+        }}
+        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+      >
+        ✏️ Засах
+      </button>
+
+      <button
+        onClick={() => {
+          handleDelete(t.id);
+          setOpenMenu(null);
+        }}
+        className="w-full px-4 py-2 text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+      >
+        🗑️ Устгах
+      </button>
+    </div>
+  )}
+</td>
                   </tr>
                 );
               })}

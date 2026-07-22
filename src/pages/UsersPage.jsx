@@ -31,9 +31,11 @@ function LocalStatusBadge({ status }) {
   );
 }
 
+const EMPTY_USER_FORM = { username: "", password: "", firstName: "", lastName: "", role: "user" };
+
 export default function UsersPage() {
   const {
-    users, deleteUser, toggleProjectUser, assignJobTitle, jobTitles,
+    users, deleteUser, addUser, resetPassword, toggleProjectUser, assignJobTitle, jobTitles,
     projects, addProject, deleteProject,
     showNotify,
   } = useAppContext();
@@ -41,14 +43,54 @@ export default function UsersPage() {
   const [activeTab,     setActiveTab]     = useState("users");
   const [projForm,      setProjForm]      = useState({ name: "", client: "", contractNo: "" });
   const [assignModal,   setAssignModal]   = useState(false);
-  
+
   // ✅ ЗАСВАР: Төсөл нэмэх Модал цонхны төлөв
-  const [projectModal,  setProjectModal]  = useState(false); 
-  
+  const [projectModal,  setProjectModal]  = useState(false);
+
   const [selectedProject, setSelectedProject] = useState(null);
   const [saving,         setSaving]        = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [activeProjDropdown, setActiveProjDropdown] = useState(null);
+
+  const [userModal, setUserModal] = useState(false);
+  const [userForm,  setUserForm]  = useState(EMPTY_USER_FORM);
+  const [savingUser, setSavingUser] = useState(false);
+
+  const [passwordModal, setPasswordModal] = useState(null); // user object эсвэл null
+  const [newPassword,   setNewPassword]   = useState("");
+
+  const handleAddUserSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!userForm.username.trim() || !userForm.password) {
+      showNotify("⚠️ Нэвтрэх нэр болон нууц үгийг бөглөнө үү!");
+      return;
+    }
+    setSavingUser(true);
+    const saved = await addUser({
+      username:  userForm.username.trim(),
+      password:  userForm.password,
+      firstName: userForm.firstName.trim(),
+      lastName:  userForm.lastName.trim(),
+      role:      userForm.role,
+    });
+    setSavingUser(false);
+    if (saved) {
+      setUserForm(EMPTY_USER_FORM);
+      setUserModal(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async () => {
+    if (!newPassword || newPassword.length < 4) {
+      showNotify("⚠️ Нууц үг дор хаяж 4 тэмдэгт байх ёстой!");
+      return;
+    }
+    const ok = await resetPassword(passwordModal.id, newPassword);
+    if (ok) {
+      setPasswordModal(null);
+      setNewPassword("");
+    }
+  };
 
   // ✅ ЗАСВАР: Модал дотроос хадгалах үед ажиллах функц
   const handleAddProjectSubmit = async (e) => {
@@ -111,6 +153,12 @@ export default function UsersPage() {
         <div className="card space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Системийн хэрэглэгчид</h2>
+            <button
+              onClick={() => setUserModal(true)}
+              className="bg-indigo-600 text-white rounded-xl py-1.5 px-3.5 text-xs font-semibold hover:bg-indigo-700 transition-all shadow-sm flex items-center gap-1"
+            >
+              ➕ Хэрэглэгч нэмэх
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -191,7 +239,16 @@ export default function UsersPage() {
                           {activeDropdown === u.id && (
                             <>
                               <div className="fixed inset-0 z-10" onClick={() => setActiveDropdown(null)} />
-                              <div className="absolute right-3 mt-1 w-28 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl z-20 p-1 py-1.5 animate-fade-in">
+                              <div className="absolute right-3 mt-1 w-36 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl z-20 p-1 py-1.5 space-y-0.5 animate-fade-in">
+                                <button
+                                  onClick={() => {
+                                    setPasswordModal(u);
+                                    setActiveDropdown(null);
+                                  }}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg font-medium transition-colors flex items-center gap-1.5"
+                                >
+                                  🔑 Нууц үг солих
+                                </button>
                                 <button
                                   onClick={() => {
                                     deleteUser(u.id);
@@ -352,6 +409,87 @@ export default function UsersPage() {
           {saving && (
             <p className="text-[11px] text-indigo-500 animate-pulse">Төслийг системд бүртгэж байна, түр хүлээнэ үү...</p>
           )}
+        </div>
+      </Modal>
+
+      {/* ── Хэрэглэгч нэмэх Modal ── */}
+      <Modal
+        open={userModal}
+        title="👤 Шинэ хэрэглэгч нэмэх"
+        onClose={() => setUserModal(false)}
+        onSave={handleAddUserSubmit}
+      >
+        <div className="space-y-3.5 p-1">
+          <FormGroup label="Нэвтрэх нэр (username)">
+            <input
+              value={userForm.username}
+              onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+              placeholder="жишээ: bataa@nccs.mn"
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
+
+          <FormGroup label="Нууц үг">
+            <input
+              type="password"
+              value={userForm.password}
+              onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+              placeholder="Дор хаяж 4 тэмдэгт"
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
+
+          <FormGroup label="Овог">
+            <input
+              value={userForm.lastName}
+              onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
+
+          <FormGroup label="Нэр">
+            <input
+              value={userForm.firstName}
+              onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
+
+          <FormGroup label="Эрх">
+            <select
+              value={userForm.role}
+              onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+              className="input text-xs py-2 w-full"
+            >
+              <option value="user">Хэрэглэгч</option>
+              <option value="manager">Менежер</option>
+              <option value="admin">Админ</option>
+            </select>
+          </FormGroup>
+
+          {savingUser && (
+            <p className="text-[11px] text-indigo-500 animate-pulse">Хэрэглэгчийг системд бүртгэж байна, түр хүлээнэ үү...</p>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── Нууц үг солих Modal ── */}
+      <Modal
+        open={!!passwordModal}
+        title={`"${passwordModal?.displayName || passwordModal?.username}"-ийн нууц үг солих`}
+        onClose={() => { setPasswordModal(null); setNewPassword(""); }}
+        onSave={handleResetPasswordSubmit}
+      >
+        <div className="p-1">
+          <FormGroup label="Шинэ нууц үг">
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Дор хаяж 4 тэмдэгт"
+              className="input text-xs py-2 w-full"
+            />
+          </FormGroup>
         </div>
       </Modal>
 

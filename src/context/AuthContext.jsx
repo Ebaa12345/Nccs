@@ -1,21 +1,14 @@
 // 📁 src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
-import { useMsal, useIsAuthenticated } from "@azure/msal-react";
-import { InteractionRequiredAuthError, InteractionStatus } from "@azure/msal-browser";
-import { loginRequest } from "../auth/msalConfig";
 
 const AuthContext = createContext();
 
 const BASE_URL = "http://localhost:5000";
+const STORAGE_KEY = "nccs_user";
 
 export function AuthProvider({ children }) {
-  const { instance, accounts, inProgress } = useMsal();
-  const isAuthenticated = useIsAuthenticated();
-
-  const [user,        setUser]        = useState(null);
-  const [isLoading,   setIsLoading]   = useState(true);
-  const [accessToken, setAccessToken] = useState(null);
- 
+  const [user,      setUser]      = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
   useEffect(() => {
@@ -23,79 +16,41 @@ export function AuthProvider({ children }) {
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
 
-  const login = async () => {
-    if (inProgress !== InteractionStatus.None) return;
-    try {
-      await instance.loginRedirect(loginRequest);
-    } catch (error) {
-      console.error("Microsoft нэвтрэхэд алдаа:", error);
-    }
-  };
-
-  const logout = async () => {
-    if (inProgress !== InteractionStatus.None) return;
-    setIsLoading(true);
-    await instance.logoutRedirect();
-  };
-
+  // Хуучин session-г localStorage-с сэргээнэ
   useEffect(() => {
-    if (inProgress !== InteractionStatus.None) return;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try { setUser(JSON.parse(saved)); } catch { /* сэргээж чадсангүй */ }
+    }
+    setIsLoading(false);
+  }, []);
 
-    const acquireAndSync = async () => {
-      if (!isAuthenticated || accounts.length === 0) {
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
+  const login = async (username, password) => {
+    const res = await fetch(`${BASE_URL}/api/auth/login`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ username, password }),
+    });
 
-      try {
-        let tokenResponse;
-        try {
-          tokenResponse = await instance.acquireTokenSilent({
-            ...loginRequest,
-            account: accounts[0],
-          });
-        } catch (err) {
-          if (err instanceof InteractionRequiredAuthError) {
-            await instance.acquireTokenRedirect(loginRequest);
-            return;
-          }
-          throw err;
-        }
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Нэвтрэхэд алдаа гарлаа");
+    }
 
-        const idToken = tokenResponse.idToken;
-        setAccessToken(idToken);
+    setUser(data);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return data;
+  };
 
-        // ✅ ЗАСВАР: /auth/azure-callback → /api/auth/azure-callback
-        const res = await fetch(`${BASE_URL}/api/auth/azure-callback`, {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ idToken }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-        } else {
-          const errText = await res.text();
-          console.error("Backend verify амжилтгүй:", res.status, errText);
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Token авахад алдаа:", error);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    acquireAndSync();
-  }, [isAuthenticated, accounts, instance, inProgress]);
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem(STORAGE_KEY);
+  };
 
   return (
     <AuthContext.Provider value={{
       user, isLoading, login, logout,
-      accessToken, API_URL: `${BASE_URL}/api`, BASE_URL,
+      API_URL: `${BASE_URL}/api`, BASE_URL,
       dark, setDark,
     }}>
       {children}

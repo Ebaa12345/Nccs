@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { LogOut, Home, Shield, User } from "lucide-react";
 
 
+
 export default function ClientLayout() {
   const { user, logout } = useAuth();
 
@@ -16,16 +17,20 @@ export default function ClientLayout() {
 
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center shadow-lg">
-              <Shield size={24} className="text-white" />
-            </div>
+            <a href="https://www.nccs.mn/" target="_blank" rel="noopener noreferrer">
+  <img
+    className="w-11 h-11 rounded-full object-cover ring-2 ring-indigo-500 shadow-md hover:scale-105 transition"
+    src="/NCCS.jpg"
+    alt="Logo"
+  />
+</a>
 
             <div>
               <h1 className="font-bold text-xl text-slate-800 dark:text-white">
                 NCCS
               </h1>
               <p className="text-xs text-slate-500">
-                 Цаг бүртгэлийн систем
+              Цаг бүртгэлийн систем
               </p>
             </div>
           </div>
@@ -51,20 +56,7 @@ export default function ClientLayout() {
             </Link>
 
             {/* User */}
-            <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 shadow">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 flex items-center justify-center text-white font-bold">
-                {user?.name?.charAt(0) || "U"}
-              </div>
-
-              <div>
-                <p className="font-semibold text-sm text-slate-800 dark:text-white">
-                  {user?.name}
-                </p>
-                <p className="text-xs text-slate-500">
-                  System User
-                </p>
-              </div>
-            </div>
+           
 
             {/* Logout */}
             <button
@@ -85,5 +77,6 @@ export default function ClientLayout() {
         </div>
       </main>
     </div>
+    
   );
 }

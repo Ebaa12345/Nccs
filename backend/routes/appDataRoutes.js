@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const Project = require('../models/Project');
 const TimeLog = require('../models/TimeLog');
 const User = require('../models/User');
@@ -45,7 +46,7 @@ router.get('/job-titles', (req, res) => {
   res.json(JOB_TITLES);
 });
 
-// ✅ ШИНЭ: Admin хэрэглэгчид ажлын төрөл оноох
+// ✅ Admin хэрэглэгчид ажлын төрөл оноох
 router.put('/users/:id/job-title', async (req, res) => {
   try {
     const { jobTitle } = req.body;
@@ -196,6 +197,57 @@ router.delete('/users/:id', async (req, res) => {
   try {
     const deleted = await User.destroy({ where: { id: req.params.id } });
     if (!deleted) return res.status(404).json({ error: 'Хэрэглэгч олдсонгүй' });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ✅ Admin-аас шинэ хэрэглэгч (username + password) үүсгэх
+router.post('/users', async (req, res) => {
+  try {
+    const { username, password, firstName, lastName, role, jobTitle } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Нэвтрэх нэр, нууц үг заавал шаардлагатай' });
+    }
+
+    const existing = await User.findOne({ where: { username } });
+    if (existing) {
+      return res.status(400).json({ error: 'Энэ нэвтрэх нэр аль хэдийн бүртгэлтэй байна' });
+    }
+
+    const hashed      = await bcrypt.hash(password, 10);
+    const displayName = `${firstName || ''} ${lastName || ''}`.trim() || username;
+
+    const user = await User.create({
+      username,
+      password: hashed,
+      firstName: firstName || '',
+      lastName:  lastName  || '',
+      displayName,
+      role:      role || 'user',
+      jobTitle:  jobTitle || '',
+    });
+
+    res.status(201).json({ ...user.toJSON(), password: undefined, _id: user.id });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ✅ Admin-аас хэрэглэгчийн нууц үг шинэчлэх/тохируулах
+router.put('/users/:id/password', async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 4) {
+      return res.status(400).json({ error: 'Нууц үг дор хаяж 4 тэмдэгт байх ёстой' });
+    }
+
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Хэрэглэгч олдсонгүй' });
+
+    const hashed = await bcrypt.hash(password, 10);
+    await user.update({ password: hashed });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
