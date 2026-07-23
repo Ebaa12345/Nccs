@@ -1,7 +1,77 @@
 // 📁 src/pages/UsersPage.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Modal, FormGroup, Avatar, StatusBadge } from "../components/UI";
 import { useAppContext } from "../context/AppContext";
+
+// Гадуур дарахад цэсийг хаах — "fixed inset-0" давхарга ашиглахгүй, илүү найдвартай
+function useClickOutside(active, onOutside, extraRef) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!active) return;
+    const handler = (e) => {
+      const inButton = ref.current && ref.current.contains(e.target);
+      const inMenu   = extraRef?.current && extraRef.current.contains(e.target);
+      if (!inButton && !inMenu) onOutside();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [active, onOutside, extraRef]);
+  return ref;
+}
+
+// ✅ Хүснэгт "overflow-x-auto" дотор байх үед dropdown хэсэгчлэгдэж (clip) дарагдахгүй
+// болохоос сэргийлж document.body руу portal-оор гаргаж, fixed байрлалаар зурна.
+function ActionMenu({ open, onToggle, onClose, items }) {
+  const btnRef  = useRef(null);
+  const menuRef = useRef(null);
+  const [coords, setCoords] = useState(null);
+  const clickOutsideRef = useClickOutside(open, onClose, menuRef);
+
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    setCoords({ top: r.bottom + 4, left: r.right });
+  }, [open]);
+
+  const setBtnRef = (el) => { btnRef.current = el; clickOutsideRef.current = el; };
+
+  return (
+    <>
+      <button
+        ref={setBtnRef}
+        type="button"
+        onClick={onToggle}
+        className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 font-bold transition-all inline-flex items-center justify-center text-sm"
+      >
+        •••
+      </button>
+      {open && coords && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed w-40 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl z-[100] p-1 py-1.5 space-y-0.5 animate-fade-in text-left"
+          style={{ top: coords.top, left: coords.left - 160 }}
+        >
+          {items.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => { item.onClick(); onClose(); }}
+              className={`w-full text-left px-3 py-1.5 text-xs rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+                item.danger
+                  ? "text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              }`}
+            >
+              {item.icon} {item.label}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 const STATUSES = ["Идэвхтэй", "Хүлээгдэж байна", "Идэвхгүй"];
 
@@ -248,42 +318,16 @@ export default function UsersPage() {
                           }
                         </td>
                         <td className="p-3"><StatusBadge status="Идэвхтэй" /></td>
-                        <td className="p-3 text-right relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveDropdown(activeDropdown === u.id ? null : u.id);
-                            }}
-                            className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 font-bold transition-all inline-flex items-center justify-center text-sm"
-                          >
-                            •••
-                          </button>
-
-                          {activeDropdown === u.id && (
-                            <>
-                              <div className="fixed inset-0 z-10" onClick={() => setActiveDropdown(null)} />
-                              <div className="absolute right-3 mt-1 w-36 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl z-20 p-1 py-1.5 space-y-0.5 animate-fade-in">
-                                <button
-                                  onClick={() => {
-                                    setPasswordModal(u);
-                                    setActiveDropdown(null);
-                                  }}
-                                  className="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg font-medium transition-colors flex items-center gap-1.5"
-                                >
-                                  🔑 Нууц үг солих
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    deleteUser(u.id);
-                                    setActiveDropdown(null);
-                                  }}
-                                  className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg font-medium transition-colors flex items-center gap-1.5"
-                                >
-                                  🗑️ Устгах
-                                </button>
-                              </div>
-                            </>
-                          )}
+                        <td className="p-3 text-right">
+                          <ActionMenu
+                            open={activeDropdown === u.id}
+                            onToggle={() => setActiveDropdown(activeDropdown === u.id ? null : u.id)}
+                            onClose={() => setActiveDropdown(null)}
+                            items={[
+                              { label: "Нууц үг солих", icon: "🔑", onClick: () => setPasswordModal(u) },
+                              { label: "Устгах", icon: "🗑️", danger: true, onClick: () => deleteUser(u.id) },
+                            ]}
+                          />
                         </td>
                       </tr>
                     );
@@ -350,43 +394,16 @@ export default function UsersPage() {
                           </span>
                         </td>
                         
-                        <td className="p-3 text-right relative whitespace-nowrap">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveProjDropdown(activeProjDropdown === p.id ? null : p.id);
-                            }}
-                            className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 font-bold transition-all inline-flex items-center justify-center text-sm"
-                          >
-                            •••
-                          </button>
-
-                          {activeProjDropdown === p.id && (
-                            <>
-                              <div className="fixed inset-0 z-10" onClick={() => setActiveProjDropdown(null)} />
-                              <div className="absolute right-3 mt-1 w-32 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-xl z-20 p-1 space-y-0.5 animate-fade-in text-left">
-                                <button
-                                  onClick={() => {
-                                    setSelectedProject(p);
-                                    setAssignModal(true);
-                                    setActiveProjDropdown(null);
-                                  }}
-                                  className="w-full text-left px-2.5 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg font-medium transition-colors flex items-center gap-1.5"
-                                >
-                                  👥 Хуваарилах
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    handleDeleteProject(p.id);
-                                    setActiveProjDropdown(null);
-                                  }}
-                                  className="w-full text-left px-2.5 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg font-medium transition-colors flex items-center gap-1.5"
-                                >
-                                  🗑️ Устгах
-                                </button>
-                              </div>
-                            </>
-                          )}
+                        <td className="p-3 text-right whitespace-nowrap">
+                          <ActionMenu
+                            open={activeProjDropdown === p.id}
+                            onToggle={() => setActiveProjDropdown(activeProjDropdown === p.id ? null : p.id)}
+                            onClose={() => setActiveProjDropdown(null)}
+                            items={[
+                              { label: "Хуваарилах", icon: "👥", onClick: () => { setSelectedProject(p); setAssignModal(true); } },
+                              { label: "Устгах", icon: "🗑️", danger: true, onClick: () => handleDeleteProject(p.id) },
+                            ]}
+                          />
                         </td>
                       </tr>
                     ))}

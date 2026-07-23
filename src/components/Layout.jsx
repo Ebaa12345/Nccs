@@ -2,6 +2,7 @@ import { useState } from "react";
 // 🌟 1. БҮРЭЛДЭХҮҮН ХЭСЭГТ Outlet НЭМЖ ИМПОРТЛОХ
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { Calendar } from "lucide-react";
 
 const NAV = [
   
@@ -108,9 +109,19 @@ export default function Layout() { // <-- children хэрэгцээгүй тул
                            border-b border-gray-100 dark:border-gray-800 flex-shrink-0 transition-colors duration-300">
           <div>
             <h1 className="text-sm font-semibold text-gray-900 dark:text-white">{currentTitle}</h1>
-            <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
-              {new Date().toLocaleDateString("mn-MN", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}
-            </p>
+            <div className="inline-flex items-center gap-1.5 mt-1 pl-1 pr-2.5 py-0.5 rounded-full
+                            bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
+              <span className="w-4 h-4 rounded-full bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                <Calendar size={10} className="text-white" strokeWidth={2.5} />
+              </span>
+              <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+                {new Date().toLocaleDateString("mn-MN", { weekday: "long" })}
+              </span>
+              <span className="text-[11px] text-indigo-400 dark:text-indigo-500">·</span>
+              <span className="text-[11px] font-medium text-indigo-500 dark:text-indigo-400 font-mono">
+                {new Date().toLocaleDateString("mn-MN", { year: "numeric", month: "long", day: "numeric" })}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950
@@ -128,7 +139,11 @@ export default function Layout() { // <-- children хэрэгцээгүй тул
 
         {/* Page content */}
         <main className="flex-1 overflow-auto p-6">
-          <div className="animate-slide-up">
+          {/* ✅ animate-fade-in ашиглана: animate-slide-up нь transform ашигладаг тул
+              animation дуусаад ч transform:translateY(0) хэвээр үлдэж, дотор нь байгаа
+              "position: fixed" модалуудын containing block-г viewport-ээс энэ div рүү
+              өөрчилдөг байсан (модал бүтэн харагдахгүй, буруу scroll хийдэг байсан шалтгаан) */}
+          <div className="animate-fade-in">
             {/* 🌟 2. ЭНД Outlet-ИЙГ БАЙРЛУУЛЖ ӨГСӨНӨӨР ҮНДСЭН ЦОНХНУУД БУЦАЖ ГАРНА */}
             <Outlet />
           </div>

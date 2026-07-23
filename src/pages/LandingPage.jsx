@@ -7,7 +7,7 @@ export default function LandingPage() {
   const stats = [
     { value: "100+", label: "Инженер" },
     { value: "50+",  label: "Төсөл" },
-    { value: "99%",  label: "Нарийвчлал" },
+    { value: "99%",  label: "Нарийвчлал" }, 
     { value: "24/7", label: "Хандалт" },
   ];
 
