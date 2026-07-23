@@ -1,8 +1,11 @@
 // 📁 src/pages/TasksPage.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useAppContext } from "../context/AppContext";
-import { MoreVertical } from "lucide-react";
+import {
+  MoreVertical, ClipboardList, FileText, FolderOpen, Clock,
+  CalendarDays, Flag, ListChecks, Users as UsersIcon, Check,
+} from "lucide-react";
 import ProgressBar from "../components/ProgressBar";
 
 
@@ -23,7 +26,7 @@ const STATUS_STYLE = {
 function Avatar({ name }) {
   const initials = (name || "U").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+    <div className="flex items-center justify-center flex-shrink-0 text-xs font-bold text-indigo-600 bg-indigo-100 rounded-full w-7 h-7 dark:bg-indigo-950 dark:text-indigo-400">
       {initials}
     </div>
   );
@@ -39,6 +42,7 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+  const formScrollRef = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -47,6 +51,8 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
         ? { ...empty, ...initial, projectId: initial.projectId || initial.project?.id || "" }
         : empty
       );
+      // ✅ Шинээр нээгдэх бүрт формыг эхнээс нь эхлүүлнэ (өмнөх scroll байрлал үлдэхээс сэргийлнэ)
+      requestAnimationFrame(() => { if (formScrollRef.current) formScrollRef.current.scrollTop = 0; });
     }
   }, [open, initial]);
 
@@ -74,31 +80,39 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xl border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 p-4 overflow-y-auto bg-black/50 backdrop-blur-sm animate-fade-in">
+      <div className="flex items-center justify-center min-h-full">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl border border-gray-200 dark:border-gray-800 flex flex-col animate-slide-up overflow-hidden">
 
         {/* Гарчиг */}
-        <div className="px-6 py-4 border-b dark:border-gray-800 flex items-center justify-between flex-shrink-0">
-          <div>
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-              {initial ? "Task засварлах" : "Шинэ task нэмэх"}
-            </h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              {initial ? `#${initial.id} · ${initial.title}` : "Шаардлагатай талбаруудыг бөглөнө үү"}
-            </p>
+        <div className="relative flex items-center justify-between flex-shrink-0 px-6 py-4 overflow-hidden border-b dark:border-gray-800">
+          <div className="absolute w-40 h-40 rounded-full pointer-events-none -top-10 -right-10 bg-gradient-to-br from-indigo-200/40 to-blue-200/20 dark:from-indigo-500/10 dark:to-blue-500/5 blur-2xl" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex items-center justify-center flex-shrink-0 w-10 h-10 shadow-md rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500 shadow-indigo-600/25">
+              <ClipboardList size={18} className="text-white" strokeWidth={2.2} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                {initial ? "Task засварлах" : "Шинэ task нэмэх"}
+              </h2>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                {initial ? `#${initial.id} · ${initial.title}` : "Шаардлагатай талбаруудыг бөглөнө үү"}
+              </p>
+            </div>
           </div>
           <button onClick={onClose}
-            className="w-7 h-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center text-gray-400 transition text-lg leading-none">
+            className="relative flex items-center justify-center flex-shrink-0 text-lg leading-none text-gray-400 transition rounded-full w-7 h-7 hover:bg-gray-100 dark:hover:bg-gray-800">
             ×
           </button>
         </div>
 
         {/* Форм */}
-        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+        <div ref={formScrollRef} className="px-6 py-4 space-y-3.5">
 
           {/* Task нэр */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              <ClipboardList size={12} className="text-indigo-400" />
               Task нэр <span className="text-red-500">*</span>
             </label>
             <input
@@ -112,7 +126,8 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
 
           {/* Тайлбар */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              <FileText size={12} className="text-indigo-400" />
               Тайлбар
             </label>
             <textarea
@@ -120,14 +135,15 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
               onChange={e => set("description", e.target.value)}
               placeholder="Task-ийн дэлгэрэнгүй тайлбар..."
               rows={3}
-              className="input w-full text-xs resize-none"
+              className="w-full text-xs resize-none input"
             />
           </div>
 
           {/* Төсөл + Est цаг */}
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                <FolderOpen size={12} className="text-indigo-400" />
                 Төсөл <span className="text-red-500">*</span>
               </label>
               <select
@@ -141,7 +157,8 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
               {errors.projectId && <p className="text-[10px] text-red-500 mt-1">{errors.projectId}</p>}
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                <Clock size={12} className="text-indigo-400" />
                 Est. цаг
               </label>
               <input
@@ -149,88 +166,110 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
                 value={form.estimatedHours}
                 onChange={e => set("estimatedHours", e.target.value)}
                 placeholder="40"
-                className="input w-full text-xs"
+                className="w-full text-xs input"
               />
             </div>
           </div>
 
-          {/* Start + Due + Priority */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Start + Due */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                <CalendarDays size={12} className="text-indigo-400" />
                 Start date
               </label>
               <input
                 type="date"
                 value={form.startDate || ""}
                 onChange={e => set("startDate", e.target.value)}
-                className="input w-full text-xs"
+                className="w-full text-xs input"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                <CalendarDays size={12} className="text-indigo-400" />
                 Delivery date
               </label>
               <input
                 type="date"
                 value={form.dueDate || ""}
                 onChange={e => set("dueDate", e.target.value)}
-                className="input w-full text-xs"
+                className="w-full text-xs input"
               />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                Priority
-              </label>
-              <select
-                value={form.priority}
-                onChange={e => set("priority", e.target.value)}
-                className="input w-full text-xs"
-              >
-                {PRIORITIES.map(p => <option key={p}>{p}</option>)}
-              </select>
             </div>
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-              Status
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              {STATUSES.map(s => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => set("status", s)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${
-                    form.status === s
-                      ? STATUS_STYLE[s] + " ring-2 ring-offset-1 ring-current"
-                      : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
+          {/* Priority + Status — нэг мөрөнд, зайг хэмнэнэ */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                <Flag size={12} className="text-indigo-400" />
+                Priority
+              </label>
+              <div className="flex gap-1.5 flex-wrap">
+                {PRIORITIES.map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => set("priority", p)}
+                    className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all ${
+                      form.priority === p
+                        ? PRIORITY_STYLE[p] + " ring-2 ring-offset-1 ring-current dark:ring-offset-gray-900"
+                        : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                <ListChecks size={12} className="text-indigo-400" />
+                Status
+              </label>
+              <div className="flex gap-1.5 flex-wrap">
+                {STATUSES.map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => set("status", s)}
+                    className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-all ${
+                      form.status === s
+                        ? STATUS_STYLE[s] + " ring-2 ring-offset-1 ring-current dark:ring-offset-gray-900"
+                        : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Engineer сонгох */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+              <UsersIcon size={12} className="text-indigo-400" />
               Assign engineer
             </label>
-            <div className="border rounded-xl dark:border-gray-700 divide-y dark:divide-gray-800 max-h-40 overflow-y-auto">
+            <div className="overflow-y-auto border divide-y rounded-xl dark:border-gray-700 dark:divide-gray-800 max-h-40">
               {/* Хоосон сонголт */}
-              <label className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
+              <label className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                  !form.assignedUserId ? "border-indigo-500 bg-indigo-500" : "border-gray-300 dark:border-gray-600"
+                }`}>
+                  {!form.assignedUserId && <Check size={9} className="text-white" strokeWidth={3} />}
+                </span>
                 <input
                   type="radio"
                   name="engineer"
                   checked={!form.assignedUserId}
                   onChange={() => set("assignedUserId", "")}
-                  className="accent-indigo-600"
+                  className="sr-only"
                 />
-                <span className="text-xs text-gray-400 italic">— Хуваарилахгүй —</span>
+                <span className="text-xs italic text-gray-400">— Хуваарилахгүй —</span>
               </label>
               {users.map(u => {
                 const name = u.firstName && u.lastName
@@ -240,22 +279,27 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
                 return (
                   <label
                     key={u.id}
-                    className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition ${
+                    className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors ${
                       isSelected
                         ? "bg-indigo-50 dark:bg-indigo-950/30"
                         : "hover:bg-gray-50 dark:hover:bg-gray-800"
                     }`}
                   >
+                    <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                      isSelected ? "border-indigo-500 bg-indigo-500" : "border-gray-300 dark:border-gray-600"
+                    }`}>
+                      {isSelected && <Check size={9} className="text-white" strokeWidth={3} />}
+                    </span>
                     <input
                       type="radio"
                       name="engineer"
                       checked={isSelected}
                       onChange={() => set("assignedUserId", u.id)}
-                      className="accent-indigo-600"
+                      className="sr-only"
                     />
                     <Avatar name={name} />
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block truncate">
+                      <span className="block text-xs font-medium text-gray-800 truncate dark:text-gray-200">
                         {name}
                       </span>
                       {u.jobTitle && (
@@ -271,11 +315,11 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
         </div>
 
         {/* Товч */}
-        <div className="px-6 py-4 border-t dark:border-gray-800 flex gap-3 flex-shrink-0">
+        <div className="flex flex-shrink-0 gap-3 px-6 py-4 border-t dark:border-gray-800">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold py-2.5 rounded-xl text-xs hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold py-2.5 rounded-xl text-xs shadow-md shadow-indigo-600/20 hover:shadow-lg hover:shadow-indigo-600/30 hover:-translate-y-0.5 active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2"
           >
             {saving ? (
               <>
@@ -294,6 +338,7 @@ function TaskModal({ open, onClose, onSave, projects, users, initial }) {
             Цуцлах
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -402,7 +447,7 @@ export default function TasksPage() {
         </div>
         <button
           onClick={() => { setEditTask(null); setModalOpen(true); }}
-          className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-semibold rounded-xl hover:opacity-80 transition"
+          className="px-4 py-2 text-xs font-semibold text-white transition bg-gray-900 dark:bg-white dark:text-gray-900 rounded-xl hover:opacity-80"
         >
           + New task
         </button>
@@ -431,9 +476,9 @@ export default function TasksPage() {
       </div>
 
       {/* Хүснэгт */}
-      <div className="card overflow-hidden p-0">
+      <div className="p-0 overflow-hidden card">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-xs text-left">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/50 text-gray-400 uppercase text-[10px] tracking-wider border-b dark:border-gray-800">
                 <th className="p-4">Task</th>
@@ -460,9 +505,9 @@ export default function TasksPage() {
                 const eName  = engineerName(t);
 
                 return (
-                  <tr key={t.id} className="border-b dark:border-gray-800 hover:bg-gray-50/40 dark:hover:bg-gray-800/20 transition">
+                  <tr key={t.id} className="transition border-b dark:border-gray-800 hover:bg-gray-50/40 dark:hover:bg-gray-800/20">
                     <td className="p-4 font-medium text-gray-900 dark:text-white max-w-[160px]">
-                      <span className="truncate block" title={t.title}>{t.title}</span>
+                      <span className="block truncate" title={t.title}>{t.title}</span>
                       {t.description && (
                         <span className="text-[10px] text-gray-400 truncate block mt-0.5" title={t.description}>
                           {t.description}
@@ -470,14 +515,14 @@ export default function TasksPage() {
                       )}
                     </td>
                     <td className="p-4 text-gray-500 max-w-[160px]">
-                      <span className="truncate block">{t.project?.name || "—"}</span>
+                      <span className="block truncate">{t.project?.name || "—"}</span>
                     </td>
                     <td className="p-4">
                       {eName ? (
                         <div className="flex items-center gap-1.5">
                           <Avatar name={eName} />
                           <div>
-                            <span className="text-gray-700 dark:text-gray-300 font-medium block">{eName}</span>
+                            <span className="block font-medium text-gray-700 dark:text-gray-300">{eName}</span>
                             {t.engineer?.jobTitle && (
                               <span className="text-[10px] text-gray-400">{t.engineer.jobTitle}</span>
                             )}
@@ -485,10 +530,10 @@ export default function TasksPage() {
                         </div>
                       ) : <span className="text-gray-400">—</span>}
                     </td>
-                    <td className="p-4 text-center text-gray-600 dark:text-gray-400 font-mono">
+                    <td className="p-4 font-mono text-center text-gray-600 dark:text-gray-400">
                       {est > 0 ? `${est}h` : "—"}
                     </td>
-                    <td className="p-4 text-center text-gray-600 dark:text-gray-400 font-mono">
+                    <td className="p-4 font-mono text-center text-gray-600 dark:text-gray-400">
                       {logged > 0 ? `${logged}h` : "—"}
                     </td>
                     <td className="p-4">
@@ -512,7 +557,7 @@ export default function TasksPage() {
                         {STATUSES.map(s => <option key={s}>{s}</option>)}
                       </select>
                     </td>
-                    <td className="p-4 text-right relative">
+                    <td className="relative p-4 text-right">
   <button
     onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)}
     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -521,7 +566,7 @@ export default function TasksPage() {
   </button>
 
   {openMenu === t.id && (
-    <div className="absolute right-4 top-12 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden">
+    <div className="absolute z-50 overflow-hidden bg-white border border-gray-200 shadow-xl right-4 top-12 w-36 dark:bg-gray-900 dark:border-gray-700 rounded-xl">
       <button
         onClick={() => {
           setEditTask(t);

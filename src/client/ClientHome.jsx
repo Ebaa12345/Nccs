@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useAppContext } from "../context/AppContext";
 import Footer from "./Footer";
+import { Clock, CalendarDays, FolderOpen, ListChecks, FileText, Send } from "lucide-react";
 
 export default function ClientHome() {
   const { user, API_URL } = useAuth();
@@ -108,23 +109,32 @@ export default function ClientHome() {
   };
 
   return (
-    <div className="max-w-6xl p-6 mx-auto overflow-hidden bg-white border border-gray-100 shadow-xl dark:bg-slate-900 rounded-3xl dark:border-slate-800/80 lg:p-8">
+    <div className="relative max-w-6xl p-6 mx-auto overflow-hidden bg-white border border-gray-100 shadow-xl dark:bg-slate-900 rounded-3xl dark:border-slate-800/80 lg:p-8 animate-fade-in">
+
+      {/* Дэвсгэр гэрэлтэлт */}
+      <div className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-gradient-to-br from-indigo-200/40 to-blue-200/20 dark:from-indigo-500/10 dark:to-blue-500/5 blur-3xl" />
 
       {/* Толгой */}
-      <div className="pb-4 mb-6 border-b border-gray-100 dark:border-slate-800/60">
-        <h2 className="text-lg font-bold tracking-tight text-slate-800 dark:text-white">Өдрийн цаг бүртгэл</h2>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Гүйцэтгэсэн ажлын цагаа системдээ хялбараар бүртгүүлээрэй.</p>
+      <div className="relative flex items-center gap-3.5 pb-4 mb-6 border-b border-gray-100 dark:border-slate-800/60">
+        <div className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 shadow-lg shadow-indigo-600/25">
+          <Clock size={20} className="text-white" strokeWidth={2.2} />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-slate-800 dark:text-white">Өдрийн цаг бүртгэл</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Гүйцэтгэсэн ажлын цагаа системдээ хялбараар бүртгүүлээрэй.</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-3">
 
         {/* ЗҮҮН ТАЛ */}
         <div className="lg:col-span-2 space-y-7">
 
           {/* 1. Огноо сонгох */}
-          <div className="space-y-3">
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: "40ms" }}>
             <div className="flex justify-between items-center px-0.5">
-              <label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                <CalendarDays size={13} className="text-indigo-400" />
                 Огноо сонгох
               </label>
               <span className="px-3 py-1 text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl dark:text-indigo-400">
@@ -142,7 +152,7 @@ export default function ClientHome() {
                     className={`flex flex-col items-center justify-center flex-1 min-w-[76px] h-[100px] rounded-[24px] transition-all duration-200 snap-start border ${
                       isSelected
                         ? "bg-[#4f46e5] border-[#4f46e5] text-white shadow-lg shadow-indigo-600/25 font-bold scale-[1.02]"
-                        : "bg-[#f4f6f9] border-[#f4f6f9] text-slate-700 dark:bg-slate-800/60 dark:border-slate-800/40 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        : "bg-[#f4f6f9] border-[#f4f6f9] text-slate-700 dark:bg-slate-800/60 dark:border-slate-800/40 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-md"
                     }`}
                   >
                     <span className={`text-[9px] font-bold tracking-wider ${isSelected ? "text-indigo-100/90" : "text-slate-400 dark:text-slate-500"}`}>
@@ -159,8 +169,9 @@ export default function ClientHome() {
           </div>
 
           {/* 2. Төсөл сонгох */}
-          <div className="space-y-3">
-            <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-0.5">
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: "100ms" }}>
+            <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-0.5">
+              <FolderOpen size={13} className="text-indigo-400" />
               Төсөл сонгох
             </label>
             {myProjects.length === 0 ? (
@@ -178,8 +189,8 @@ export default function ClientHome() {
                       onClick={() => setSelectedProjectId(String(p.id))}
                       className={`p-4 text-left rounded-2xl border transition-all duration-200 flex flex-col justify-between min-w-[190px] snap-start relative overflow-hidden ${
                         isSelected
-                          ? "bg-white border-indigo-600 ring-2 ring-indigo-600/10 dark:bg-slate-900 dark:border-indigo-500"
-                          : "bg-slate-50/50 border-slate-100/80 dark:bg-slate-800/30 dark:border-slate-800/60 hover:bg-slate-100"
+                          ? "bg-white border-indigo-600 ring-2 ring-indigo-600/10 dark:bg-slate-900 dark:border-indigo-500 shadow-md"
+                          : "bg-slate-50/50 border-slate-100/80 dark:bg-slate-800/30 dark:border-slate-800/60 hover:bg-slate-100 hover:-translate-y-0.5 hover:shadow-md"
                       }`}
                     >
                       {isSelected && (
@@ -204,9 +215,10 @@ export default function ClientHome() {
 
           {/* 3. Task сонгох — төсөл сонгосон үед гарна */}
           {selectedProjectId && (
-            <div className="space-y-3">
+            <div className="space-y-3 animate-slide-up" style={{ animationDelay: "140ms" }}>
               <div className="flex items-center justify-between px-0.5">
-                <label className="text-xs font-bold tracking-wider uppercase text-slate-400 dark:text-slate-500">
+                <label className="flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase text-slate-400 dark:text-slate-500">
+                  <ListChecks size={13} className="text-indigo-400" />
                   Task сонгох
                 </label>
                 {selectedTaskId && (
@@ -287,7 +299,7 @@ export default function ClientHome() {
         </div>
 
         {/* БАРУУН ТАЛ */}
-        <div className="p-5 border lg:col-span-1 bg-slate-50/60 dark:bg-slate-800/20 rounded-2xl border-slate-100 dark:border-slate-800/60">
+        <div className="p-5 border lg:col-span-1 bg-slate-50/60 dark:bg-slate-800/20 rounded-2xl border-slate-100 dark:border-slate-800/60 animate-slide-up" style={{ animationDelay: "180ms" }}>
           <form onSubmit={handleSubmit} className="space-y-4">
 
             {/* Сонгосон task-ийн мэдээлэл */}
@@ -306,7 +318,8 @@ export default function ClientHome() {
 
             {/* Ажилласан цаг */}
             <div>
-              <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 px-0.5">
+              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 px-0.5">
+                <Clock size={12} className="text-indigo-400" />
                 Ажилласан цаг
               </label>
               <div className="relative">
@@ -322,7 +335,8 @@ export default function ClientHome() {
 
             {/* Хийсэн ажлын тайлбар */}
             <div>
-              <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 px-0.5">
+              <label className="flex items-center gap-1.5 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 px-0.5">
+                <FileText size={12} className="text-indigo-400" />
                 Хийсэн ажлын тайлбар
               </label>
               <textarea
@@ -336,9 +350,10 @@ export default function ClientHome() {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold text-xs py-3.5 rounded-xl shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-[0.99] transition-all tracking-wide uppercase mt-2"
+              className="group w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold text-xs py-3.5 rounded-xl shadow-md shadow-indigo-600/10 hover:shadow-lg hover:shadow-indigo-600/25 hover:-translate-y-0.5 active:scale-[0.99] transition-all tracking-wide uppercase mt-2"
             >
-              🕒 Ажлын цаг бүртгүүлэх
+              <Send size={13} className="transition-transform group-hover:translate-x-0.5" />
+              Ажлын цаг бүртгүүлэх
             </button>
           </form>
         </div>

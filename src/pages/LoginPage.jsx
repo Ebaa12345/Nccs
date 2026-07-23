@@ -117,7 +117,7 @@ export default function LandingPage() {
 
           {/* Nav links */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {["Онцлог", "Тайлан", "Холбоо барих"].map(label => (
+              {["Онцлог", "Тайлан", "Холбоо барих"].map(label => (
               <a key={label} href="#" style={{
                 padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 500,
                 color: "#94a3b8", textDecoration: "none", transition: "all 0.2s",
